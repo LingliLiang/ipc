@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="ipc">
+      <UniqueIdentifier>{55f34171-81c8-4951-855d-d2222d900c73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ipc\channel">
+      <UniqueIdentifier>{b586a7e8-c90d-4715-a31c-901013a9b09e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ipc\sharedmem">
+      <UniqueIdentifier>{1b16ce33-0d24-4c03-b0da-df1711e3ea47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ipc\basic">
+      <UniqueIdentifier>{567f12e8-87f1-4eda-9406-fe5b21cebd26}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ipc\ipc_endpoint.cpp">
+      <Filter>ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="ipc\ipc_thread.cpp">
+      <Filter>ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="ipc\ipc_utils.cpp">
+      <Filter>ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="ipc\ipc_msg.cpp">
+      <Filter>ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="ipc\basic_message.cpp">
+      <Filter>ipc\basic</Filter>
+    </ClCompile>
+    <ClCompile Include="ipc\basic_thread.cpp">
+      <Filter>ipc\basic</Filter>
+    </ClCompile>
+    <ClCompile Include="ipc\ipc_sharedmem.cpp">
+      <Filter>ipc\sharedmem</Filter>
+    </ClCompile>
+    <ClCompile Include="MainSource.cpp">
+      <Filter>ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="ipc\ipc_channel.cpp">
+      <Filter>ipc\channel</Filter>
+    </ClCompile>
+    <ClCompile Include="ipc\ipc_channel_reader.cpp">
+      <Filter>ipc\channel</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ipc\ipc_common.h">
+      <Filter>ipc</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_endpoint.h">
+      <Filter>ipc</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_messager.h">
+      <Filter>ipc</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_thread.h">
+      <Filter>ipc</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_utils.h">
+      <Filter>ipc</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_basic.h">
+      <Filter>ipc</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_msg.h">
+      <Filter>ipc</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\basic_message.h">
+      <Filter>ipc\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\basic_thread.h">
+      <Filter>ipc\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_sharedmem.h">
+      <Filter>ipc\sharedmem</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_forwards.h">
+      <Filter>ipc</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_channel.h">
+      <Filter>ipc\channel</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_channel_reader.h">
+      <Filter>ipc\channel</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
