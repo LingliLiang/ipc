@@ -18,7 +18,8 @@ namespace IPC
 			// to avoid conflicting with normal
 			// message types, which are enumeration
 			// constants starting from 0.
-			HELLO_MESSAGE_TYPE = kuint16max
+			HELLO_MESSAGE_TYPE = kuint16max-1,
+			GOODBYE_MESSAGE_TYPE = kuint16max
 		};
 
 		static const size_t kMaximumMessageSize = 128 * 1024 * 1024;
@@ -46,10 +47,17 @@ namespace IPC
 
 			void* Lock()
 			{
+				int ss=0;
+				char buffer[10] = {0};
 				void* pData = 0;
 				pData = (char*)Map();
 				if (pData)
+				{
 					memcpy_s((void*)&m_lock, sizeof(unsigned int), (void*)pData, sizeof(unsigned int));
+					ss = *((int*)pData);
+					sprintf(buffer,"Lock%d\n",ss);
+					//::OutputDebugStringA(buffer);
+				}
 				else
 					return NULL;
 				while (InterlockedCompareExchange(&m_lock, 1, 0) != 0)
@@ -57,16 +65,25 @@ namespace IPC
 					Sleep(0);
 					memcpy_s((void*)&m_lock, sizeof(unsigned int), (void*)pData, sizeof(unsigned int));
 				}
+				memcpy_s((void*)pData, sizeof(unsigned int), (void*)&m_lock, sizeof(unsigned int));
+				ss = *((int*)pData);
+				sprintf(buffer,"Lock222%d\n",ss);
+				//::OutputDebugStringA(buffer);
 				return ((char*)pData) + kLockSize_;
 			}
 
 			void Unlock(void* pData)
 			{
 				if (!pData) return;
+							int ss=0;
+				char buffer[10] = {0};
 				pData = ((char*)pData) - kLockSize_;
 				assert(pData);
 				SpinLockEx::Unlock();
 				memcpy_s((void*)pData, sizeof(unsigned int), (void*)&m_lock, sizeof(unsigned int));
+			ss = *((int*)pData);
+					sprintf(buffer,"Unlock%d\n",ss);
+					//::OutputDebugStringA(buffer);
 				UnMap(pData);
 			}
 		protected:
@@ -99,16 +116,14 @@ namespace IPC
 		bool IsHelloMessages(Message* msg);
 		bool ProcessOutgoingMessages();
 
-		virtual void OnNewWork(HANDLE wait_event);
-		virtual bool OnCheckMem();
+		bool ProcessMessages();
 		virtual void OnWaitLock(HANDLE wait_event);
 	private:
 		// Messages to be sent are queued here.
 		std::queue<Message*> output_queue_;
 
 		// In server-mode, we have to wait for the client to connect before we
-		// can begin reading.  We make use of the input_state_ when performing
-		// the connect operation in overlapped mode.
+		// can begin reading.
 		bool waiting_connect_;
 
 		HANDLE map_;

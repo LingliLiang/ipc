@@ -19,6 +19,7 @@ namespace IPC
 
 	SharedMem::~SharedMem()
 	{
+		AutoLock lock(thread_->tlock_);
 		Close();
 	}
 
@@ -27,9 +28,11 @@ namespace IPC
 		if (waiting_connect_)
 		{
 			Message* message = new Message(MSG_ROUTING_NONE, HELLO_MESSAGE_TYPE, basic_message::PRIORITY_NORMAL);
+			message->AddRef();
 			bool failed = message->WriteUInt32(self_pid_);
 			output_queue_.push(message);
 			thread_->PostTask(std::bind(&SharedMem::ProcessHelloMessages,this));
+			::OutputDebugStringA("ProcessHelloMessages\n");
 			return false;
 		}
 		return true;
@@ -45,13 +48,17 @@ namespace IPC
 
 	bool SharedMem::Send(Message * message)
 	{
+		AutoLock lock(lock_);
 		message->AddRef();
 		output_queue_.push(message);
 		// ensure waiting to write
 		if (!waiting_connect_)
 		{
+			::OutputDebugStringA("ProcessOutgoingMessages\n");
 			if (!ProcessOutgoingMessages())
 				return false;
+			Sleep(80);
+			//thread_->PostTask(std::bind(&SharedMem::ProcessOutgoingMessages,this));
 		}
 		return false;
 	}
@@ -102,9 +109,8 @@ namespace IPC
 	void SharedMem::ProcessHelloMessages()
 	{
 		AutoLock lock(lock_);
-		// Why are we trying to send messages if there's
-		// no connection?
-		assert(waiting_connect_);
+
+		//assert(waiting_connect_);
 
 		if (output_queue_.empty())
 			return;
@@ -114,6 +120,7 @@ namespace IPC
 
 		// Write to map...
 		Message* m = output_queue_.front();
+		output_queue_.pop();
 		assert(m->size() <= kMaximumMessageSize);
 		bool ok = false;
 		char* pData = (char*)spinlock_.Lock();
@@ -127,19 +134,30 @@ namespace IPC
 			spinlock_.Unlock(pData);
 			ok = true;
 		}
+		m->Release();
 	}
 
 	bool SharedMem::IsHelloMessages(Message* msg)
 	{
-		if(msg->routing_id() == MSG_ROUTING_NONE
-			&& msg->type() == HELLO_MESSAGE_TYPE )
+		if(msg->routing_id() == MSG_ROUTING_NONE)
 		{
-			unsigned int pid = 0;
-			memcpy_s((void*)&pid, sizeof(unsigned int), (void*)msg->payload(), sizeof(unsigned int));
-			if(pid && peer_pid_ != pid)
+			if(msg->type() == HELLO_MESSAGE_TYPE )
 			{
-				peer_pid_ = pid; // client pid
-				waiting_connect_ = false;
+				unsigned int pid = 0;
+				memcpy_s((void*)&pid, sizeof(unsigned int), (void*)msg->payload(), sizeof(unsigned int));
+				if(pid && self_pid_ != pid)
+				{
+					peer_pid_ = pid; // client pid
+					waiting_connect_ = false;
+					receiver_->OnConnected(peer_pid_);
+					return true;
+				}
+			}
+			else if(msg->type() == GOODBYE_MESSAGE_TYPE)
+			{
+				peer_pid_ = 0;
+				waiting_connect_ = true;
+				receiver_->OnError();
 				return true;
 			}
 		}
@@ -161,6 +179,7 @@ namespace IPC
 
 		// Write to map...
 		Message* m = output_queue_.front();
+		output_queue_.pop();
 		assert(m->size() <= kMaximumMessageSize);
 		bool ok = false;
 		char* pData = (char*)spinlock_.Lock();
@@ -174,15 +193,12 @@ namespace IPC
 			spinlock_.Unlock(pData);
 			ok = true;
 		}
+		m->Release();
 		return ok;
 	}
 
-	void SharedMem::OnNewWork(HANDLE wait_event)
-	{
-		::SetEvent(wait_event);
-	}
 
-	bool SharedMem::OnCheckMem()
+	bool SharedMem::ProcessMessages()
 	{
 		char* pData = (char*)spinlock_.Lock();
 		if (!pData)
@@ -191,6 +207,7 @@ namespace IPC
 		}
 		else
 		{
+			bool wipe_msg = false;
 			const char* message_tail = Message::FindNext(pData,pData+kMaximumMessageSize);
 			if(message_tail)
 			{
@@ -198,13 +215,25 @@ namespace IPC
 
 				Message* m = new Message(pData, len);
 				m->AddRef();
-				MessageReader reader(m);
+				//MessageReader reader(m);
 				//hello message ???
-				IsHelloMessages(m);
-				//recv message
-				if(!peer_pid_ && peer_pid_ == m->routing_id())
+				if(IsHelloMessages(m))
 				{
-					receiver_->OnMessageReceived(m);
+					wipe_msg = true;
+				}
+				else
+				{
+					//recv message
+					if(peer_pid_ && peer_pid_ == m->routing_id())
+					{
+						receiver_->OnMessageReceived(m);
+						wipe_msg = true;
+					}
+				}
+				m->Release();
+				if(wipe_msg)
+				{
+					memset(pData,0,len);
 				}
 			}
 			spinlock_.Unlock(pData);
@@ -215,6 +244,7 @@ namespace IPC
 	void SharedMem::OnWaitLock(HANDLE wait_event)
 	{
 		int timeout = 100;
+		ProcessMessages();
 		//do timeout check
 		::WaitForSingleObject(wait_event, timeout);
 	}

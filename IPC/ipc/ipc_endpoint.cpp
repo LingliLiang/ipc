@@ -24,18 +24,18 @@ namespace IPC
 	Endpoint::~Endpoint()
 	{
 		SetConnected(false);
+		HANDLE wait_event = ::CreateEvent(NULL, FALSE, FALSE, NULL);
+		thread_->PostTask(std::bind(&Endpoint::Close, this, wait_event));
+		DWORD ret = ::WaitForSingleObject(wait_event, 2000);
+		assert(ret == WAIT_OBJECT_0);
+		CloseHandle(wait_event);
+		thread_->Stop();
+		thread_->Wait(2000);
 		if (iterpc_Impl_) 
 		{
-			HANDLE wait_event = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-			thread_->PostTask(std::bind(&Endpoint::Close, this, wait_event));
-			DWORD ret = ::WaitForSingleObject(wait_event, 2000);
-			assert(ret == WAIT_OBJECT_0);
-			CloseHandle(wait_event);
 			delete iterpc_Impl_;
 			iterpc_Impl_ = NULL;
 		}
-		thread_->Stop();
-		thread_->Wait(2000);
 		delete thread_;
 		thread_ = NULL;
 		
@@ -141,9 +141,9 @@ namespace IPC
 
 	void Endpoint::Close(HANDLE wait_event)
 	{
-		BasicIterPC* pIpc = iterpc_Impl_;
-		iterpc_Impl_ = NULL;
-		delete pIpc;
+		//BasicIterPC* pIpc = iterpc_Impl_;
+		//iterpc_Impl_ = NULL;
+		//delete pIpc;
 		SetEvent(wait_event);
 	}
 

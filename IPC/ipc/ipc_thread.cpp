@@ -155,22 +155,6 @@ namespace IPC
 	ThreadShared::~ThreadShared()
 	{}
 
-	void ThreadShared::ScheduleWork()
-	{
-		if(handler_)
-			handler_->OnNewWork(wait_event_);
-		else
-			basic_thread::ScheduleWork();
-	}
-
-	bool ThreadShared::DoMoreWork()
-	{
-		if(handler_)
-			return handler_->OnCheckMem();
-		else
-			return false;
-	}
-
 	void ThreadShared::WaitForWork()
 	{
 		int timeout;
@@ -183,6 +167,22 @@ namespace IPC
 		else
 		{
 			basic_thread::WaitForWork();
+		}
+	}
+
+	void ThreadShared::Run()
+	{
+		while (!should_quit_)
+		{
+			if(1){
+				AutoLock lock(tlock_);
+				bool more_work_is_plausible = DoScheduledWork();
+				if (should_quit_) break;
+				more_work_is_plausible |= DoMoreWork();
+				if (more_work_is_plausible) continue;
+				if (should_quit_) break;
+				WaitForWork();  // Wait (sleep) until we have work to do again.
+			}
 		}
 	}
 }

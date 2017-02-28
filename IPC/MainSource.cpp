@@ -45,7 +45,10 @@ int _tmain()
 {
 	SampleClient listener;
 	IPC::Endpoint endpoint(kChannelName, &listener,IPC::Endpoint::METHOD_SHARED);
+	//IPC::Endpoint endpoint(kChannelName, &listener,IPC::Endpoint::METHOD_PIPE);
 	std::string cmd;
+	std::string txt;
+	char buffer[120*4] = {8};
 	while (true)
 	{
 		std::cout << ">>";
@@ -56,10 +59,18 @@ int _tmain()
 		}
 		else
 		{
+			int num = 0;
+			while(num<60)
+			{
 			ScopedPtr<IPC::Message> m(new IPC::Message(GetCurrentProcessId(), 0, (IPC::Message::PriorityValue)0));
-			m->WriteString(cmd);
+			sprintf(buffer,"%04d",num);
+			txt = buffer;
+			m->WriteString(txt);
 			//std::cout << "Process [" << GetCurrentProcessId() << "]: " << cmd << std::endl;
 			endpoint.Send(m.get());
+			memset(buffer,8,120*4);
+			num++;
+			}
 		}
 	}
 	return 0;

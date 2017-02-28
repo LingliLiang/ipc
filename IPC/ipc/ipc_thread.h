@@ -75,13 +75,11 @@ namespace IPC
 
 	class ThreadShared : public basic_thread
 	{
+		friend class SharedMem;
 	public:
 		class MemHandler {
 		public:
 			virtual ~MemHandler() {}
-
-			virtual void OnNewWork(HANDLE wait_event) = 0;
-			virtual bool OnCheckMem() = 0;
 			virtual void OnWaitLock(HANDLE wait_event) = 0;
 		};
 
@@ -89,13 +87,11 @@ namespace IPC
 		~ThreadShared();
 
 		void RegisterHandler(MemHandler* handler){handler_ = handler;}
-
 	private:
-		//virtual void Run();
-		virtual void ScheduleWork();
-		virtual bool DoMoreWork();
+		virtual void Run();
 		virtual void WaitForWork();
 
 		MemHandler* handler_;
+		mutable Lock tlock_;
 	};
 }
