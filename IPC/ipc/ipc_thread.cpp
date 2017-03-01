@@ -162,7 +162,6 @@ namespace IPC
 		if(handler_)
 		{
 			handler_->OnWaitLock(wait_event_);
-			::ResetEvent(wait_event_);
 		}
 		else
 		{
@@ -175,7 +174,6 @@ namespace IPC
 		while (!should_quit_)
 		{
 			if(1){
-				AutoLock lock(tlock_);
 				bool more_work_is_plausible = DoScheduledWork();
 				if (should_quit_) break;
 				more_work_is_plausible |= DoMoreWork();

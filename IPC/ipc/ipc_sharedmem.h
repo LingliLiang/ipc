@@ -24,11 +24,11 @@ namespace IPC
 
 		static const size_t kMaximumMessageSize = 128 * 1024 * 1024;
 
-		class SharedSpinLockEx :public SpinLockEx
+		class SharedSpinLockEx
 		{
 		public:
 			SharedSpinLockEx(HANDLE* hMap)
-				:hMap_(hMap), kLockSize_(sizeof(m_lock)) {}
+				:hMap_(hMap), kLockSize_(sizeof(m_lock)),m_plock(NULL) {}
 
 			void AssignMem(bool lock_)
 			{
@@ -47,44 +47,30 @@ namespace IPC
 
 			void* Lock()
 			{
-				int ss=0;
-				char buffer[10] = {0};
 				void* pData = 0;
 				pData = (char*)Map();
 				if (pData)
 				{
-					memcpy_s((void*)&m_lock, sizeof(unsigned int), (void*)pData, sizeof(unsigned int));
-					ss = *((int*)pData);
-					sprintf(buffer,"Lock%d\n",ss);
-					//::OutputDebugStringA(buffer);
+					m_plock = ((unsigned int*)pData);
 				}
 				else
 					return NULL;
-				while (InterlockedCompareExchange(&m_lock, 1, 0) != 0)
+				while (InterlockedCompareExchange(reinterpret_cast<volatile unsigned int*>(m_plock), 1, 0) != 0)
 				{
 					Sleep(0);
-					memcpy_s((void*)&m_lock, sizeof(unsigned int), (void*)pData, sizeof(unsigned int));
+					::OutputDebugStringA("wait-----------------------\n");
 				}
-				memcpy_s((void*)pData, sizeof(unsigned int), (void*)&m_lock, sizeof(unsigned int));
-				ss = *((int*)pData);
-				sprintf(buffer,"Lock222%d\n",ss);
-				//::OutputDebugStringA(buffer);
 				return ((char*)pData) + kLockSize_;
 			}
 
 			void Unlock(void* pData)
 			{
 				if (!pData) return;
-							int ss=0;
-				char buffer[10] = {0};
 				pData = ((char*)pData) - kLockSize_;
 				assert(pData);
-				SpinLockEx::Unlock();
-				memcpy_s((void*)pData, sizeof(unsigned int), (void*)&m_lock, sizeof(unsigned int));
-			ss = *((int*)pData);
-					sprintf(buffer,"Unlock%d\n",ss);
-					//::OutputDebugStringA(buffer);
+				InterlockedExchange(m_plock, 0);
 				UnMap(pData);
+				m_plock = NULL;
 			}
 		protected:
 			inline void* Map()
@@ -97,7 +83,9 @@ namespace IPC
 			}
 		private:
 			HANDLE* hMap_;
+			unsigned int* m_plock;
 			const int kLockSize_;
+			volatile unsigned int m_lock;
 		};
 
 
@@ -116,7 +104,7 @@ namespace IPC
 		bool IsHelloMessages(Message* msg);
 		bool ProcessOutgoingMessages();
 
-		bool ProcessMessages();
+		inline bool ProcessMessages();
 		virtual void OnWaitLock(HANDLE wait_event);
 	private:
 		// Messages to be sent are queued here.

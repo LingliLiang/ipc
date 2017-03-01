@@ -19,21 +19,20 @@ namespace IPC
 
 	SharedMem::~SharedMem()
 	{
-		AutoLock lock(thread_->tlock_);
 		Close();
 	}
 
 	bool SharedMem::Connect()
 	{
 		if (waiting_connect_)
-		{
-			Message* message = new Message(MSG_ROUTING_NONE, HELLO_MESSAGE_TYPE, basic_message::PRIORITY_NORMAL);
-			message->AddRef();
-			bool failed = message->WriteUInt32(self_pid_);
-			output_queue_.push(message);
-			thread_->PostTask(std::bind(&SharedMem::ProcessHelloMessages,this));
-			::OutputDebugStringA("ProcessHelloMessages\n");
-			return false;
+		{AutoLock lock(lock_);
+		Message* message = new Message(MSG_ROUTING_NONE, HELLO_MESSAGE_TYPE, basic_message::PRIORITY_NORMAL);
+		message->AddRef();
+		bool failed = message->WriteUInt32(self_pid_);
+		output_queue_.push(message);
+		//thread_->PostTask(std::bind(&SharedMem::ProcessHelloMessages,this));
+		::OutputDebugStringA("ProcessHelloMessages\n");
+		return false;
 		}
 		return true;
 	}
@@ -55,9 +54,9 @@ namespace IPC
 		if (!waiting_connect_)
 		{
 			::OutputDebugStringA("ProcessOutgoingMessages\n");
-			if (!ProcessOutgoingMessages())
-				return false;
-			Sleep(80);
+			//if (!ProcessOutgoingMessages())
+			return false;
+			//Sleep(80);
 			//thread_->PostTask(std::bind(&SharedMem::ProcessOutgoingMessages,this));
 		}
 		return false;
@@ -166,17 +165,18 @@ namespace IPC
 
 	bool SharedMem::ProcessOutgoingMessages()
 	{
+
 		AutoLock lock(lock_);
 		// Why are we trying to send messages if there's
 		// no connection?
-		assert(!waiting_connect_);
+		//assert(!waiting_connect_);
 
 		if (output_queue_.empty())
 			return true;
 
 		if (INVALID_HANDLE_VALUE == map_)
 			return false;
-
+		::OutputDebugStringA("Write-----------\n");
 		// Write to map...
 		Message* m = output_queue_.front();
 		output_queue_.pop();
@@ -201,6 +201,7 @@ namespace IPC
 	bool SharedMem::ProcessMessages()
 	{
 		char* pData = (char*)spinlock_.Lock();
+		::OutputDebugStringA("Lock-----------\n");
 		if (!pData)
 		{
 			DWORD err = GetLastError();
@@ -236,6 +237,17 @@ namespace IPC
 					memset(pData,0,len);
 				}
 			}
+			if (!output_queue_.empty())
+			{
+				::OutputDebugStringA("Write-----------\n");
+				// Write to map...
+				Message* m = output_queue_.front();
+				output_queue_.pop();
+				assert(m->size() <= kMaximumMessageSize);
+				memcpy_s(pData, m->size(), m->data(), m->size());
+				m->Release();
+			}
+
 			spinlock_.Unlock(pData);
 		}
 		return false; //allways false
@@ -243,10 +255,13 @@ namespace IPC
 
 	void SharedMem::OnWaitLock(HANDLE wait_event)
 	{
-		int timeout = 100;
+		int timeout = 10;
 		ProcessMessages();
+		//ProcessOutgoingMessages();
 		//do timeout check
-		::WaitForSingleObject(wait_event, timeout);
+		//::WaitForSingleObject(wait_event, timeout);
+		//::ResetEvent(wait_event);
+		Sleep(10);
 	}
 
 }

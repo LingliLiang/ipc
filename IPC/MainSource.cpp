@@ -2,6 +2,8 @@
 #include "ipc\ipc_endpoint.h"
 #include "ipc\ipc_msg.h"
 #include <iostream>
+
+#include "ipc/ipc_utils.h"
 const TCHAR kChannelName[] = TEXT("SampleServer");
 using namespace IPC;
 class SampleClient : public IPC::Receiver
@@ -43,6 +45,13 @@ void sss()
 }
 int _tmain()
 {
+/*	IPC::SpinLockEx lock;
+	while(1)
+	{
+		lock.Lock();
+		Sleep(10);
+		lock.Unlock();
+	}*/
 	SampleClient listener;
 	IPC::Endpoint endpoint(kChannelName, &listener,IPC::Endpoint::METHOD_SHARED);
 	//IPC::Endpoint endpoint(kChannelName, &listener,IPC::Endpoint::METHOD_PIPE);

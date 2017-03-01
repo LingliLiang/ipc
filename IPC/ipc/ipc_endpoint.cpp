@@ -147,5 +147,8 @@ namespace IPC
 		SetEvent(wait_event);
 	}
 
-
+	BasicIterPC* Endpoint::GetControl()
+	{
+		return iterpc_Impl_;
+	}
 }

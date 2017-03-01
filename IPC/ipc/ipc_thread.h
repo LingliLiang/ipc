@@ -92,6 +92,6 @@ namespace IPC
 		virtual void WaitForWork();
 
 		MemHandler* handler_;
-		mutable Lock tlock_;
+		//mutable Lock tlock_;
 	};
 }

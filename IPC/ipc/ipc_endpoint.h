@@ -29,6 +29,7 @@ namespace IPC
 
 		virtual void OnError() override;
 
+		BasicIterPC* GetControl();
 	private:
 		void CreateInstance(BasicIterPC** iterpc, basic_thread** thread);
 		void Create();
