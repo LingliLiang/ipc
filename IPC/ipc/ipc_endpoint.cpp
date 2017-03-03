@@ -141,9 +141,13 @@ namespace IPC
 
 	void Endpoint::Close(HANDLE wait_event)
 	{
-		//BasicIterPC* pIpc = iterpc_Impl_;
-		//iterpc_Impl_ = NULL;
-		//delete pIpc;
+		if(method_ == METHOD_PIPE)
+		{
+			//Channel::~() Make sure all IO has completed
+			BasicIterPC* pIpc = iterpc_Impl_;
+			iterpc_Impl_ = NULL;
+			delete pIpc;
+		}
 		SetEvent(wait_event);
 	}
 

@@ -27,6 +27,8 @@ namespace IPC
 		class SharedSpinLockEx
 		{
 		public:
+			const int kLockSize_;
+
 			SharedSpinLockEx(HANDLE* hMap)
 				:hMap_(hMap), kLockSize_(sizeof(m_lock)),m_plock(NULL) {}
 
@@ -58,7 +60,6 @@ namespace IPC
 				while (InterlockedCompareExchange(reinterpret_cast<volatile unsigned int*>(m_plock), 1, 0) != 0)
 				{
 					Sleep(0);
-					::OutputDebugStringA("wait-----------------------\n");
 				}
 				return ((char*)pData) + kLockSize_;
 			}
@@ -84,10 +85,32 @@ namespace IPC
 		private:
 			HANDLE* hMap_;
 			unsigned int* m_plock;
-			const int kLockSize_;
 			volatile unsigned int m_lock;
 		};
 
+		class LazyWait{
+		public:
+			LazyWait()
+				:down_limit_(2),
+				wait_time_(2)
+			{}
+			void Warnning()
+			{
+				wait_time_ = down_limit_;
+			}
+			void Lazying()
+			{
+				if(wait_time_<256)
+					wait_time_= wait_time_*2;
+			}
+			void Wait()
+			{
+				Sleep((DWORD)wait_time_);
+			}
+		private:
+			unsigned short down_limit_;
+			unsigned short wait_time_;
+		};
 
 		SharedMem(const ipc_tstring& name,
 			Receiver* receiver, ThreadShared* thread);
@@ -96,12 +119,14 @@ namespace IPC
 		virtual bool Connect() override;
 		virtual void Close() override;
 		virtual bool Send(Message* message) override;
+
 	private:
 
 		static const ipc_tstring MapName(const ipc_tstring& map_id);
 		bool CreateSharedMap();
 		void ProcessHelloMessages();
-		bool IsHelloMessages(Message* msg);
+		int IsHelloMessages(Message* msg);
+		bool IsValuable(Message* msg);
 		bool ProcessOutgoingMessages();
 
 		inline bool ProcessMessages();
@@ -123,6 +148,8 @@ namespace IPC
 		ThreadShared* thread_;
 
 		const DWORD self_pid_;
+
+		LazyWait wait_;
 	};
 
 }

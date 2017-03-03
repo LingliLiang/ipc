@@ -25,14 +25,14 @@ namespace IPC
 	bool SharedMem::Connect()
 	{
 		if (waiting_connect_)
-		{AutoLock lock(lock_);
-		Message* message = new Message(MSG_ROUTING_NONE, HELLO_MESSAGE_TYPE, basic_message::PRIORITY_NORMAL);
-		message->AddRef();
-		bool failed = message->WriteUInt32(self_pid_);
-		output_queue_.push(message);
-		//thread_->PostTask(std::bind(&SharedMem::ProcessHelloMessages,this));
-		::OutputDebugStringA("ProcessHelloMessages\n");
-		return false;
+		{
+			AutoLock lock(lock_);
+			Message* message = new Message(MSG_ROUTING_NONE, HELLO_MESSAGE_TYPE, basic_message::PRIORITY_NORMAL);
+			message->AddRef();
+			bool failed = message->WriteUInt32(self_pid_);
+			output_queue_.push(message);
+			::OutputDebugStringA("ProcessHelloMessages\n");
+			return false;
 		}
 		return true;
 	}
@@ -47,17 +47,14 @@ namespace IPC
 
 	bool SharedMem::Send(Message * message)
 	{
-		AutoLock lock(lock_);
-		message->AddRef();
-		output_queue_.push(message);
 		// ensure waiting to write
 		if (!waiting_connect_)
 		{
+			AutoLock lock(lock_);
+			message->AddRef();
+			output_queue_.push(message);
 			::OutputDebugStringA("ProcessOutgoingMessages\n");
-			//if (!ProcessOutgoingMessages())
-			return false;
-			//Sleep(80);
-			//thread_->PostTask(std::bind(&SharedMem::ProcessOutgoingMessages,this));
+			return true;
 		}
 		return false;
 	}
@@ -136,7 +133,7 @@ namespace IPC
 		m->Release();
 	}
 
-	bool SharedMem::IsHelloMessages(Message* msg)
+	int SharedMem::IsHelloMessages(Message* msg)
 	{
 		if(msg->routing_id() == MSG_ROUTING_NONE)
 		{
@@ -144,12 +141,13 @@ namespace IPC
 			{
 				unsigned int pid = 0;
 				memcpy_s((void*)&pid, sizeof(unsigned int), (void*)msg->payload(), sizeof(unsigned int));
-				if(pid && self_pid_ != pid)
+				if(pid)
 				{
+					if(self_pid_ == pid) return -1;
 					peer_pid_ = pid; // client pid
 					waiting_connect_ = false;
 					receiver_->OnConnected(peer_pid_);
-					return true;
+					return 1;
 				}
 			}
 			else if(msg->type() == GOODBYE_MESSAGE_TYPE)
@@ -157,10 +155,16 @@ namespace IPC
 				peer_pid_ = 0;
 				waiting_connect_ = true;
 				receiver_->OnError();
-				return true;
+				return 1;
 			}
 		}
-		return false;
+		return 0;
+	}
+
+	bool SharedMem::IsValuable(Message* msg)
+	{
+		basic_message::Header hdr={0};
+		return 0 == ::memcmp(msg->data(),&hdr,sizeof(hdr))? false:true;
 	}
 
 	bool SharedMem::ProcessOutgoingMessages()
@@ -197,56 +201,92 @@ namespace IPC
 		return ok;
 	}
 
-
 	bool SharedMem::ProcessMessages()
 	{
 		char* pData = (char*)spinlock_.Lock();
-		::OutputDebugStringA("Lock-----------\n");
+		//::OutputDebugStringA("Lock-----------\n");
 		if (!pData)
 		{
 			DWORD err = GetLastError();
 		}
 		else
 		{
+			size_t dataLen = *((unsigned int*)(pData)); //first is all message len
+			size_t remainLen = dataLen;
 			bool wipe_msg = false;
-			const char* message_tail = Message::FindNext(pData,pData+kMaximumMessageSize);
-			if(message_tail)
-			{
-				int len = static_cast<int>(message_tail - pData);
-
-				Message* m = new Message(pData, len);
-				m->AddRef();
+			const char* message_hdr = pData+sizeof(unsigned int);
+			const char* message_tail = Message::FindNext(message_hdr,message_hdr+remainLen);
+			while(dataLen){
+				if(!message_tail){
+					*((unsigned int*)(pData)) = 0;
+					break;
+				}
+				int len = static_cast<int>(message_tail - message_hdr);
+				ScopedPtr<Message> m(new Message(message_hdr, len));
 				//MessageReader reader(m);
-				//hello message ???
-				if(IsHelloMessages(m))
+				if(IsValuable(m.get()))
 				{
-					wipe_msg = true;
+					//hello message ???
+					int recode = IsHelloMessages(m.get());
+					if(recode == 1)
+					{
+						wipe_msg = true; // other hello message
+					}
+					else if(recode == -1)
+					{
+						break;// self hello message, quit
+					}
+					else
+					{
+						//recv message
+						if(peer_pid_ && peer_pid_ == m->routing_id())
+						{
+							receiver_->OnMessageReceived(m.get());
+							wipe_msg = true;
+						}
+					}
+					if(wipe_msg)
+					{
+						memset((void*)message_hdr,0,len);
+						wait_.Warnning();
+					}
 				}
 				else
 				{
-					//recv message
-					if(peer_pid_ && peer_pid_ == m->routing_id())
-					{
-						receiver_->OnMessageReceived(m);
-						wipe_msg = true;
-					}
+					break;
 				}
-				m->Release();
-				if(wipe_msg)
-				{
-					memset(pData,0,len);
-				}
+				remainLen -= len;
+				message_hdr = message_tail;
+				message_tail = Message::FindNext(message_hdr,message_hdr+remainLen);
 			}
+			//no new message
+			message_hdr = pData+remainLen + sizeof(unsigned int);
+			remainLen = kMaximumMessageSize- remainLen - sizeof(unsigned int) ;
+			dataLen = 0;
 			if (!output_queue_.empty())
 			{
+				wait_.Warnning();
+				AutoLock lock(lock_);
 				::OutputDebugStringA("Write-----------\n");
 				// Write to map...
-				Message* m = output_queue_.front();
-				output_queue_.pop();
-				assert(m->size() <= kMaximumMessageSize);
-				memcpy_s(pData, m->size(), m->data(), m->size());
-				m->Release();
+				while(!output_queue_.empty())
+				{
+					Message* m = output_queue_.front();
+					if(m->size() <= remainLen)
+					{
+						output_queue_.pop();
+						memcpy_s((void*)message_hdr, m->size(), m->data(), m->size());
+						dataLen += m->size();
+						remainLen -= m->size();
+						m->Release();
+					}
+					else
+						break;
+				}
+				*((unsigned int*)(pData)) = dataLen;
 			}
+			else
+					wait_.Lazying();
 
 			spinlock_.Unlock(pData);
 		}
@@ -255,13 +295,8 @@ namespace IPC
 
 	void SharedMem::OnWaitLock(HANDLE wait_event)
 	{
-		int timeout = 10;
 		ProcessMessages();
-		//ProcessOutgoingMessages();
-		//do timeout check
-		//::WaitForSingleObject(wait_event, timeout);
-		//::ResetEvent(wait_event);
-		Sleep(10);
+		wait_.Wait();
 	}
 
 }
