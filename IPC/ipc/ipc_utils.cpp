@@ -69,7 +69,7 @@ namespace IPC
 		assert(range > 0u);
 		// We must discard random results above this number, as they would
 		// make the random generator non-uniform (consider e.g. if
-		// MAX_UINT64 was 7 and |range| was 5, then a result of 1 would be twice
+		// MAX_unsigned long long was 7 and |range| was 5, then a result of 1 would be twice
 		// as likely as a result of 3 or 4).
 		ipc_ull max_acceptable_value =
 			((std::numeric_limits<ipc_ull>::max)() / range) * range - 1;

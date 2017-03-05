@@ -62,7 +62,7 @@ namespace IPC
 	{
 	public:
 		enum {
-			HELLO_MESSAGE_TYPE = kuint16max  // Maximum value of message type (uint16),
+			HELLO_MESSAGE_TYPE = kushortmax  // Maximum value of message type (unsigned short),
 											 // to avoid conflicting with normal
 											 // message types, which are enumeration
 											 // constants starting from 0.

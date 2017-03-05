@@ -75,23 +75,76 @@ namespace IPC
 
 	class ThreadShared : public basic_thread
 	{
-		friend class SharedMem;
+		friend class ThreadReader;
+		friend class ThreadWirter;
 	public:
-		class MemHandler {
+		class NotifyHandler {
 		public:
-			virtual ~MemHandler() {}
-			virtual void OnWaitLock(HANDLE wait_event) = 0;
+			virtual ~NotifyHandler() {}
+			virtual void OnProcessWirte(HANDLE wait_event) = 0;
+			virtual void OnProcessRead(HANDLE wait_event) = 0;
+			virtual void OnQuit() = 0;
+		};
+		class ThreadReader : public basic_thread
+		{
+			friend class ThreadShared;
+		public:
+			ThreadReader(ThreadShared* host) :host_(host) {}
+			~ThreadReader(){}
+		private:
+			virtual void WaitForWork()
+			{
+				if (host_->handler_)
+				{
+					host_->handler_->OnProcessRead(wait_event_);
+				}
+				else
+				{
+					//do timeout check
+					::WaitForSingleObject(wait_event_, 1000);
+					::ResetEvent(wait_event_);
+				}
+
+			}
+			ThreadShared* host_;
+		};
+		class ThreadWirter : public basic_thread
+		{
+			friend class ThreadShared;
+		public:
+			ThreadWirter(ThreadShared* host) :host_(host) {}
+			~ThreadWirter(){}
+		private:
+			virtual void WaitForWork()
+			{
+				if (host_->handler_)
+				{
+					host_->handler_->OnProcessWirte(wait_event_);
+				}
+				else
+				{
+					//do timeout check
+					::WaitForSingleObject(wait_event_, 1000);
+					::ResetEvent(wait_event_);
+				}
+
+			}
+			ThreadShared* host_;
 		};
 
 		ThreadShared();
 		~ThreadShared();
 
-		void RegisterHandler(MemHandler* handler){handler_ = handler;}
-	private:
-		virtual void Run();
-		virtual void WaitForWork();
+		void RegisterHandler(NotifyHandler* handler){handler_ = handler;}
+		virtual void Start();
+		virtual void Stop();
+		virtual void Wait(DWORD timeout);
 
-		MemHandler* handler_;
-		//mutable Lock tlock_;
+		virtual void PostTask(const Task& task);
+	private:
+
+		NotifyHandler* handler_;
+		ThreadReader reader_;
+		ThreadWirter wirter_;
 	};
 }

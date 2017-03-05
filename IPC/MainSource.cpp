@@ -3,7 +3,6 @@
 #include "ipc\ipc_msg.h"
 #include <iostream>
 #include"Timer.h"
-#include "Timer.cpp"
 
 #include "ipc/ipc_utils.h"
 const TCHAR kChannelName[] = TEXT("SampleServer");
@@ -15,11 +14,11 @@ class SampleClient : public IPC::Receiver
 public:
 	virtual bool OnMessageReceived(IPC::Message* msg);
 
-	virtual void OnConnected(int32 peer_pid);
+	virtual void OnConnected(int peer_pid);
 
 	virtual void OnError();
 protected:
-	int32 id_;
+	int id_;
 };
 
 void SampleClient::OnError()
@@ -27,7 +26,7 @@ void SampleClient::OnError()
 	std::cout << "Process [" << id_ << "] Disconnected" << std::endl;
 }
 
-void SampleClient::OnConnected(int32 peer_pid)
+void SampleClient::OnConnected(int peer_pid)
 {
 	id_ = peer_pid;
 	std::cout << "Process [" << peer_pid << "] Connected" << std::endl;
@@ -40,6 +39,7 @@ bool SampleClient::OnMessageReceived(IPC::Message* msg)
 	{
 		fi = tiem.AbsoluteTime() - fi;
 		std::cout << fi<<std::endl;
+		std::cout << "------------------------------------------" << std::endl;
 		qqq=0;
 	}
 	if(qqq==0)
@@ -52,9 +52,10 @@ bool SampleClient::OnMessageReceived(IPC::Message* msg)
 	//IPC::MessageReader reader(msg);
 	//reader.ReadString(&s);
 	const char* sss = msg->payload();
-	memcpy(&s[0],sss+4,16);
+	memcpy(&s[0],sss+4,4);
 	
-	std::cout << "Process [" << id_ << "]: " << s << msg->type()<<std::endl;
+	std::cout << "Process [" << id_ << "]: " << s <<" Size:"
+		<< msg->payload_size()-4 <<" Msg Type:"<<  msg->type()<<std::endl;
 	return true;
 }
 
@@ -64,19 +65,14 @@ void sss()
 }
 int _tmain()
 {
-/*	IPC::SpinLockEx lock;
-	while(1)
-	{
-		lock.Lock();
-		Sleep(10);
-		lock.Unlock();
-	}*/
 	SampleClient listener;
 	IPC::Endpoint endpoint(kChannelName, &listener,IPC::Endpoint::METHOD_SHARED);
 	//IPC::Endpoint endpoint(kChannelName, &listener,IPC::Endpoint::METHOD_PIPE);
 	std::string cmd;
 	std::string txt;
-	char buffer[10] = {0};
+	const int kbufsize = 1280*720*32;
+	char* buffer = new char[kbufsize];
+	memset(buffer, 0, kbufsize);
 	while (true)
 	{
 		std::cout << ">>";
@@ -88,29 +84,30 @@ int _tmain()
 		else
 		{
 			int num = 0;
-			while(num<10)
+			auto Send=[&](int ms)->void
 			{
-			ScopedPtr<IPC::Message> m(new IPC::Message(GetCurrentProcessId(), 0, (IPC::Message::PriorityValue)0));
-			sprintf_s(buffer,"%04d",num);
-			int offset = strlen(buffer);
-			memset(&buffer[offset],'a',sizeof(buffer)-offset-1);
-			buffer[9] = '\0';
-			txt = buffer;
-			m->WriteString(txt);
-			//std::cout << "Process [" << GetCurrentProcessId() << "]: " << cmd << std::endl;
-			endpoint.Send(m.get());
-			num++;
+				char numbuf[5] = { 0 };
+				IPC::ScopedPtr<IPC::Message> m(new IPC::Message(GetCurrentProcessId(), ms, (IPC::Message::PriorityValue)0));
+				sprintf_s(numbuf, "%04d", num);
+				int offset = strlen(numbuf);
+				memcpy_s(buffer, offset, numbuf, offset);
+				/*memset(buffer+offset, '1', kbufsize - offset);
+				buffer[kbufsize-1] = '\0';
+				buffer[kbufsize - 2] = 'D';
+				buffer[kbufsize - 3] = 'N';
+				buffer[kbufsize - 4] = 'E';*/
+				//txt = buffer;
+				m->WriteData(buffer, kbufsize);
+				endpoint.Send(m.get());
+			};
+			while (num < 100)
+			{
+				Send(0);
+				num++;
 			}
-			ScopedPtr<IPC::Message> m(new IPC::Message(GetCurrentProcessId(), 1, (IPC::Message::PriorityValue)0));
-			sprintf_s(buffer,"%04d",num);
-			int offset = strlen(buffer);
-			memset(&buffer[offset],'a',sizeof(buffer)-offset-1);
-			buffer[9] = '\0';
-			txt = buffer;
-			m->WriteString(txt);
-			//std::cout << "Process [" << GetCurrentProcessId() << "]: " << cmd << std::endl;
-			endpoint.Send(m.get());
+			Send(1);
 		}
 	}
+	delete buffer;
 	return 0;
 }

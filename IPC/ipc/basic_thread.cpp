@@ -23,7 +23,7 @@ namespace IPC
 
 	void basic_thread::Run()
 	{
-		while (true)
+		while (!should_quit_)
 		{
 			bool more_work_is_plausible = DoScheduledWork();
 			if (should_quit_) break;

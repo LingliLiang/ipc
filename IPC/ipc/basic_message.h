@@ -12,7 +12,7 @@ enum SpecialRoutingIDs {
 	MSG_ROUTING_NONE = -2,
 
 	// indicates a general message not sent to a particular tab.
-	MSG_ROUTING_CONTROL = kint32max,
+	MSG_ROUTING_CONTROL = kintmax,
 };
 
 namespace IPC
@@ -43,7 +43,7 @@ namespace IPC
 
 		// Initialize a message with a user-defined type, priority value, and
 		// destination WebView ID.
-		basic_message(int32 routing_id, uint32 type, PriorityValue priority);
+		basic_message(int routing_id, unsigned int type, PriorityValue priority);
 
 		// Initializes a message from a const block of data.  The data is not copied;
 		// instead the data is merely referenced by this message.  Only const methods
@@ -55,10 +55,10 @@ namespace IPC
 
 #pragma pack(push, 4)
 		struct Header {
-			int32 routing;  // ID of the view that this message is destined for
-			uint32 type;    // specifies the user-defined message type
-			uint32 flags;   // specifies control flags for the message
-			uint32 payload_size;
+			int routing;  // ID of the view that this message is destined for
+			unsigned int type;    // specifies the user-defined message type
+			unsigned int flags;   // specifies control flags for the message
+			unsigned int payload_size;
 		};//16 BYTES
 #pragma pack(pop)
 
@@ -110,19 +110,19 @@ namespace IPC
 		// for the result.
 		bool is_caller_pumping_messages() const;
 
-		uint32 type() const;
+		unsigned int type() const;
 
-		int32 routing_id() const;
+		int routing_id() const;
 
-		void set_routing_id(int32 new_id);
+		void set_routing_id(int new_id);
 
-		uint32 flags() const;
+		unsigned int flags() const;
 
 	public:
 
 		// Sets all the given header values. The message should be empty at this
 		// call.
-		void SetHeaderValues(int32 routing, uint32 type, uint32 flags);
+		void SetHeaderValues(int routing, unsigned int type, unsigned int flags);
 
 		bool WriteBool(bool value) {
 			return WriteInt(value ? 1 : 0);
@@ -130,16 +130,16 @@ namespace IPC
 		bool WriteInt(int value) {
 			return WriteBytes(&value, sizeof(value));
 		}
-		bool WriteUInt16(uint16 value) {
+		bool WriteUInt16(unsigned short value) {
 			return WriteBytes(&value, sizeof(value));
 		}
-		bool WriteUInt32(uint32 value) {
+		bool WriteUInt32(unsigned int value) {
 			return WriteBytes(&value, sizeof(value));
 		}
-		bool WriteInt64(int64 value) {
+		bool WriteInt64(long long value) {
 			return WriteBytes(&value, sizeof(value));
 		}
-		bool WriteUInt64(uint64 value) {
+		bool WriteUInt64(unsigned long long value) {
 			return WriteBytes(&value, sizeof(value));
 		}
 		bool WriteFloat(float value) {
@@ -173,7 +173,7 @@ namespace IPC
 			return i + (alignment - (i % alignment)) % alignment;
 		}
 
-		static const uint32 kHeaderSize;
+		static const unsigned int kHeaderSize;
 
 		// Allocation size of payload (or -1 if allocation is const).
 		size_t capacity_;
@@ -198,10 +198,10 @@ namespace IPC
 		// result could not be extracted.
 		bool ReadBool(bool* result);
 		bool ReadInt(int* result);
-		bool ReadUInt16(uint16* result);
-		bool ReadUInt32(uint32* result);
-		bool ReadInt64(int64* result);
-		bool ReadUInt64(uint64* result);
+		bool ReadUInt16(unsigned short* result);
+		bool ReadUInt32(unsigned int* result);
+		bool ReadInt64(long long* result);
+		bool ReadUInt64(unsigned long long* result);
 		bool ReadFloat(float* result);
 		bool ReadString(std::string* result);
 		bool ReadWString(std::wstring* result);

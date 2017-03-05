@@ -21,6 +21,7 @@
     <ClCompile Include="ipc\ipc_thread.cpp" />
     <ClCompile Include="ipc\ipc_utils.cpp" />
     <ClCompile Include="MainSource.cpp" />
+    <ClCompile Include="timer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ipc\basic_message.h" />
@@ -36,6 +37,7 @@
     <ClInclude Include="ipc\ipc_sharedmem.h" />
     <ClInclude Include="ipc\ipc_thread.h" />
     <ClInclude Include="ipc\ipc_utils.h" />
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{060017DA-9096-47C6-9CCC-2248281018DE}</ProjectGuid>
@@ -48,7 +50,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfAtl>false</UseOfAtl>
-    <PlatformToolset>v100</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>

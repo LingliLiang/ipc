@@ -66,7 +66,7 @@ namespace IPC
 	public:
 		inline ipc_ull GetNext() {
 			return static_cast<ipc_ull>(
-				InterlockedExchangeAdd(reinterpret_cast<volatile ULONGLONG*>(&seq_),	1));
+				InterlockedExchangeAdd(reinterpret_cast<volatile unsigned long long*>(&seq_),	1));
 		}
 
 	private:
