@@ -46,16 +46,16 @@ bool SampleClient::OnMessageReceived(IPC::Message* msg)
 	{
 		fi = tiem.AbsoluteTime();
 	}qqq++;
-	std::string s;
-	s.resize(20,0);
-	msg->routing_id();
+	//std::string s;
+	//s.resize(20,0);
+	//msg->routing_id();
 	//IPC::MessageReader reader(msg);
 	//reader.ReadString(&s);
-	const char* sss = msg->payload();
-	memcpy(&s[0],sss+4,4);
+	//const char* sss = msg->payload();
+	//memcpy(&s[0],sss+4,4);
 	
-	std::cout << "Process [" << id_ << "]: " << s <<" Size:"
-		<< msg->payload_size()-4 <<" Msg Type:"<<  msg->type()<<std::endl;
+	std::cout << "Process [" << id_ << "]: " << std::endl;
+	//std::cout << s << " Size:"<< msg->payload_size()-4 <<" Msg Type:"<<  msg->type()<<std::endl;
 	return true;
 }
 
@@ -100,7 +100,7 @@ int _tmain()
 				m->WriteData(buffer, kbufsize);
 				endpoint.Send(m.get());
 			};
-			while (num < 100)
+			while (num < 60)
 			{
 				Send(0);
 				num++;

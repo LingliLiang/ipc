@@ -27,7 +27,7 @@ namespace IPC
 		static const size_t k1080pSize = 1980 * 1080 * 32;
 		static const size_t kMaximumMapSize = 512 * 1024 * 1024;
 		static const size_t kMaximumMessageSize = kMaximumMapSize/2;
-
+		/*
 		class SharedSpinLockEx
 		{
 		public:
@@ -51,10 +51,9 @@ namespace IPC
 					return NULL;
 				while (InterlockedCompareExchange(reinterpret_cast<volatile unsigned int*>(m_plock), 1, 0) != 0)
 				{
-					Sleep(0);
+					Sleep(1);
 					//::OutputDebugStringA("InterlockedCompareExchange-----------\n");
 				}
-				//fine = time_.AbsoluteTime();
 				return pData + kLockSize_;
 			}
 
@@ -63,13 +62,10 @@ namespace IPC
 				if (!pData) return;
 				pData = (char*)pData - kLockSize_;
 				assert(pData);
+				m_plock = (unsigned int*)(pData);
 				InterlockedExchange(m_plock, 0);
 				UnMap(pData);
 				m_plock = NULL;
-				//char numbuf[16] = { 0 };
-				//fine = time_.AbsoluteTime() - fine;
-				//sprintf_s(numbuf, "%lf-----\n", fine);
-				//::OutputDebugStringA(numbuf);
 			}
 		protected:
 			inline void* Map()
@@ -85,8 +81,51 @@ namespace IPC
 			unsigned int* m_plock;
 			unsigned long offset_;
 			volatile unsigned int m_lock;
-			Timing::Timer time_;
-			double fine;
+		};
+		*/
+
+		class SharedSpinLockEx
+		{
+		public:
+			const int kLockSize_;
+
+			SharedSpinLockEx()
+				:data_(NULL),kLockSize_(sizeof(m_lock)), m_plock(NULL), offset_(0) {}
+
+			//Set value before do Lock.
+			void SetOffset(unsigned long offset) { offset_ = offset; }
+
+			//Set value before do Lock.
+			void SetData(void* data) { data_ = (char*)data; }
+
+			void* Data() { return data_; }
+
+			void* Lock()
+			{
+				if(!data_) return NULL;
+				m_plock = (unsigned int*)(data_);
+				while (InterlockedCompareExchange(reinterpret_cast<volatile unsigned int*>(m_plock), 1, 0) != 0)
+				{
+					Sleep(1);
+					//::OutputDebugStringA("InterlockedCompareExchange-----------\n");
+				}
+				return data_ + kLockSize_+ offset_;
+			}
+
+			void Unlock()
+			{
+				if (!data_) return;
+				m_plock = (unsigned int*)(data_);
+				InterlockedExchange(m_plock, 0);
+				m_plock = NULL;
+			}
+		protected:
+
+		private:
+			char* data_;
+			unsigned int* m_plock;
+			unsigned long offset_;
+			volatile unsigned int m_lock;
 		};
 
 		class LazyWait{

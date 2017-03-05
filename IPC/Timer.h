@@ -26,11 +26,14 @@ namespace Timing
         /// </summary>
         LARGE_INTEGER frequency;
 
+		double interTime;
     public:
         /// <summary>
         ///  Initializes a new instance of the <see cref="Timer"/> class.
         /// </summary>
         Timer();
+
+		~Timer();
 
         /// <summary>
         ///  Gets the absolute time.

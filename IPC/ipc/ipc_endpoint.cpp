@@ -140,7 +140,10 @@ namespace IPC
 		}
 		SetConnected(false);
 		receiver_->OnError();
-		Start();
+		if (method_ == METHOD_PIPE)
+		{
+			Start();
+		}
 	}
 
 	void Endpoint::Close(HANDLE wait_event)

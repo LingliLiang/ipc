@@ -5,7 +5,7 @@
 //------------------------------------------------------------------------------
 //#include "stdafx.h"
 #include "Timer.h"
-
+#include <iostream>
 namespace Timing
 {
 
@@ -17,8 +17,14 @@ Timer::Timer()
         initialized = false;
         return;
     }
-
+	interTime = AbsoluteTime();
     initialized = true;
+}
+
+Timer::~Timer()
+{
+	interTime = AbsoluteTime() - interTime;
+	std::cout << "Timer [" << interTime << "]" << std::endl;
 }
 
 /// <summary>
