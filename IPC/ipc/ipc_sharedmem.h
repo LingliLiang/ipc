@@ -6,23 +6,27 @@
 #include "ipc/ipc_thread.h"
 #include <cassert>
 #include <queue>
+#include"Timer.h"
 namespace IPC
 {
+	//only one to one mode
 	class SharedMem
 		: public BasicIterPC,
-		public ThreadShared::MemHandler
+		public ThreadShared::NotifyHandler
 	{
 	public:
 		enum {
-			// Maximum value of message type (uint16),
+			// Maximum value of message type (unsigned short),
 			// to avoid conflicting with normal
 			// message types, which are enumeration
 			// constants starting from 0.
-			HELLO_MESSAGE_TYPE = kuint16max-1,
-			GOODBYE_MESSAGE_TYPE = kuint16max
+			HELLO_MESSAGE_TYPE = kushortmax-1,
+			GOODBYE_MESSAGE_TYPE = kushortmax
 		};
-
-		static const size_t kMaximumMessageSize = 128 * 1024 * 1024;
+		static const size_t k4kSize = 3840 * 2160 * 32;
+		static const size_t k1080pSize = 1980 * 1080 * 32;
+		static const size_t kMaximumMapSize = 512 * 1024 * 1024;
+		static const size_t kMaximumMessageSize = kMaximumMapSize/2;
 
 		class SharedSpinLockEx
 		{
@@ -30,53 +34,47 @@ namespace IPC
 			const int kLockSize_;
 
 			SharedSpinLockEx(HANDLE* hMap)
-				:hMap_(hMap), kLockSize_(sizeof(m_lock)),m_plock(NULL) {}
+				:hMap_(hMap), kLockSize_(sizeof(m_lock)),m_plock(NULL), offset_(0){}
 
-			void AssignMem(bool lock_)
-			{
-				char* pData = NULL;
-				unsigned int lock = !!lock_;
-				pData = (LPSTR)Map();
-				if (pData == NULL)
-				{
-					_tprintf(TEXT("Could not map view of file (%d).\n"),
-						GetLastError());
-					return;
-				}
-				memcpy_s((void*)pData, sizeof(unsigned int), (void*)&lock, sizeof(unsigned int));
-				UnMap(pData);
-			}
+			//Set value before do Lock.
+			void SetOffset(unsigned long offset) { offset_ = offset; }
 
 			void* Lock()
 			{
-				void* pData = 0;
+				char* pData = 0;
 				pData = (char*)Map();
 				if (pData)
 				{
-					m_plock = ((unsigned int*)pData);
+					m_plock = (unsigned int*)(pData);
 				}
 				else
 					return NULL;
 				while (InterlockedCompareExchange(reinterpret_cast<volatile unsigned int*>(m_plock), 1, 0) != 0)
 				{
 					Sleep(0);
+					//::OutputDebugStringA("InterlockedCompareExchange-----------\n");
 				}
-				return ((char*)pData) + kLockSize_;
+				//fine = time_.AbsoluteTime();
+				return pData + kLockSize_;
 			}
 
 			void Unlock(void* pData)
 			{
 				if (!pData) return;
-				pData = ((char*)pData) - kLockSize_;
+				pData = (char*)pData - kLockSize_;
 				assert(pData);
 				InterlockedExchange(m_plock, 0);
 				UnMap(pData);
 				m_plock = NULL;
+				//char numbuf[16] = { 0 };
+				//fine = time_.AbsoluteTime() - fine;
+				//sprintf_s(numbuf, "%lf-----\n", fine);
+				//::OutputDebugStringA(numbuf);
 			}
 		protected:
 			inline void* Map()
 			{
-				return ::MapViewOfFile(*hMap_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+				return ::MapViewOfFile(*hMap_, FILE_MAP_ALL_ACCESS, 0, offset_, kMaximumMessageSize);
 			}
 			inline void UnMap(void* pData)
 			{
@@ -85,7 +83,10 @@ namespace IPC
 		private:
 			HANDLE* hMap_;
 			unsigned int* m_plock;
+			unsigned long offset_;
 			volatile unsigned int m_lock;
+			Timing::Timer time_;
+			double fine;
 		};
 
 		class LazyWait{
@@ -100,7 +101,7 @@ namespace IPC
 			}
 			void Lazying()
 			{
-				if(wait_time_<256)
+				if(wait_time_<513)
 					wait_time_= wait_time_*2;
 			}
 			void Wait()
@@ -119,18 +120,20 @@ namespace IPC
 		virtual bool Connect() override;
 		virtual void Close() override;
 		virtual bool Send(Message* message) override;
-
+		bool SayKeyWord(unsigned short word);
 	private:
 
 		static const ipc_tstring MapName(const ipc_tstring& map_id);
 		bool CreateSharedMap();
-		void ProcessHelloMessages();
-		int IsHelloMessages(Message* msg);
-		bool IsValuable(Message* msg);
-		bool ProcessOutgoingMessages();
+		inline int ContactMessages(Message* msg);
+		inline bool IsValuable(Message* msg);
+		bool ProcessReadMessages();
+		bool ProcessWirteMessages();
+		//inline bool ProcessMessages();
 
-		inline bool ProcessMessages();
-		virtual void OnWaitLock(HANDLE wait_event);
+		virtual void OnProcessWirte(HANDLE wait_event);
+		virtual void OnProcessRead(HANDLE wait_event);
+		virtual void OnQuit();
 	private:
 		// Messages to be sent are queued here.
 		std::queue<Message*> output_queue_;
@@ -139,17 +142,26 @@ namespace IPC
 		// can begin reading.
 		bool waiting_connect_;
 
+		//true 'this' using top half map size to read from others
+		bool top_read_;
+
 		HANDLE map_;
 
-		SharedSpinLockEx spinlock_;
+		//read lock
+		SharedSpinLockEx spinlockr_;
+		//wirte lock
+		SharedSpinLockEx spinlockw_;
+		LazyWait waitr_;
+		LazyWait waitw_;
 
+		//output queue lock
 		mutable Lock lock_;
 
 		ThreadShared* thread_;
 
 		const DWORD self_pid_;
 
-		LazyWait wait_;
+		
 	};
 
 }

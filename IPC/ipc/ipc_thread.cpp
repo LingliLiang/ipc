@@ -34,7 +34,7 @@ namespace IPC
 		// If |item.has_valid_io_context| is false then |item.context| does not point
 		// to a context structure, and so should not be dereferenced, although it may
 		// still hold valid non-pointer data.
-		if (!item.has_valid_io_context || item.context->handler)  {
+		if (!item.has_valid_io_context || item.context->handler) {
 			if (filter && item.handler != filter) {
 				// Save this item for later
 				completed_io_.push_back(item);
@@ -80,12 +80,12 @@ namespace IPC
 	bool Thread::MatchCompletedIOItem(IOHandler * filter, IOItem * item)
 	{
 		for (std::list<IOItem>::iterator it = completed_io_.begin();
-			it != completed_io_.end(); ++it) {
-				if (!filter || it->handler == filter) {
-					*item = *it;
-					completed_io_.erase(it);
-					return true;
-				}
+		it != completed_io_.end(); ++it) {
+			if (!filter || it->handler == filter) {
+				*item = *it;
+				completed_io_.erase(it);
+				return true;
+			}
 		}
 		return false;
 	}
@@ -97,10 +97,10 @@ namespace IPC
 		OVERLAPPED* overlapped = NULL;
 		if (!GetQueuedCompletionStatus(io_port_, &item->bytes_transfered, &key,
 			&overlapped, timeout)) {
-				if (!overlapped)
-					return false;  // Nothing in the queue.
-				item->error = GetLastError();
-				item->bytes_transfered = 0;
+			if (!overlapped)
+				return false;  // Nothing in the queue.
+			item->error = GetLastError();
+			item->bytes_transfered = 0;
 		}
 
 		item->handler = KeyToHandler(key, &item->has_valid_io_context);
@@ -112,9 +112,9 @@ namespace IPC
 	{
 		if (this == reinterpret_cast<Thread*>(item.context) &&
 			this == reinterpret_cast<Thread*>(item.handler)) {
-				// This is our internal completion.
-				assert(!item.bytes_transfered);
-				return true;
+			// This is our internal completion.
+			assert(!item.bytes_transfered);
+			return true;
 		}
 		return false;
 	}
@@ -149,39 +149,50 @@ namespace IPC
 	//------------------------------------------------------------------------------
 
 	ThreadShared::ThreadShared()
-		:handler_(NULL)
+		:handler_(NULL),
+		reader_(this),
+		wirter_(this)
 	{}
 
 	ThreadShared::~ThreadShared()
 	{}
 
-	void ThreadShared::WaitForWork()
+	void ThreadShared::Start()
 	{
-		int timeout;
-		timeout = INFINITE;
-		if(handler_)
-		{
-			handler_->OnWaitLock(wait_event_);
-		}
-		else
-		{
-			basic_thread::WaitForWork();
-		}
+		reader_.Start();
+		wirter_.Start();
 	}
 
-	void ThreadShared::Run()
+	void ThreadShared::Stop()
 	{
-		while (!should_quit_)
-		{
-			if(1){
-				bool more_work_is_plausible = DoScheduledWork();
-				if (should_quit_) break;
-				more_work_is_plausible |= DoMoreWork();
-				if (more_work_is_plausible) continue;
-				if (should_quit_) break;
-				WaitForWork();  // Wait (sleep) until we have work to do again.
-			}
-		}
+		if (handler_) handler_->OnQuit();
+		reader_.should_quit_ = true;
+		wirter_.should_quit_ = true;
+		::SetEvent(reader_.wait_event_);
+		::SetEvent(wirter_.wait_event_);
 	}
+
+	void ThreadShared::Wait(DWORD timeout)
+	{
+		HANDLE threads[] = { reader_.thread_,wirter_.thread_ };
+		DWORD ret = ::WaitForMultipleObjects(2, threads, TRUE, timeout);
+		assert(ret == WAIT_OBJECT_0);/*WAIT_TIMEOUT*/
+		if(reader_.thread_)
+		{
+			CloseHandle(reader_.thread_);
+			reader_.thread_ = NULL;
+		}
+		if (wirter_.thread_)
+		{
+			CloseHandle(wirter_.thread_);
+			wirter_.thread_ = NULL;
+		}
+		handler_ = NULL;
+	}
+
+	void ThreadShared::PostTask(const Task & task)
+	{
+		wirter_.PostTask(task);
+	}
+
 }
-

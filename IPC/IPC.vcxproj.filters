@@ -49,6 +49,7 @@
     <ClCompile Include="ipc\ipc_channel_reader.cpp">
       <Filter>ipc\channel</Filter>
     </ClCompile>
+    <ClCompile Include="timer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ipc\ipc_common.h">
@@ -90,5 +91,6 @@
     <ClInclude Include="ipc\ipc_channel_reader.h">
       <Filter>ipc\channel</Filter>
     </ClInclude>
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
 </Project>

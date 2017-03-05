@@ -131,9 +131,13 @@ namespace IPC
 
 	void Endpoint::OnError()
 	{
-		BasicIterPC* pIpc = iterpc_Impl_;
-		iterpc_Impl_ = NULL;
-		delete pIpc;
+		if (method_ == METHOD_PIPE)
+		{
+			//Channel::~() Error close
+			BasicIterPC* pIpc = iterpc_Impl_;
+			iterpc_Impl_ = NULL;
+			delete pIpc;
+		}
 		SetConnected(false);
 		receiver_->OnError();
 		Start();

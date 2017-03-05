@@ -5,7 +5,7 @@
 
 namespace {
 
-	int32 g_ref_num = 0;
+	int g_ref_num = 0;
 
 	const int kPayloadUnit = 32;
 
@@ -16,9 +16,9 @@ namespace {
 	// Create a reference number for identifying IPC messages in traces. The return
 	// values has the reference number stored in the upper 24 bits, leaving the low
 	// 8 bits set to 0 for use as flags.
-	inline uint32 GetRefNumUpper24() {
-		int32 pid = 0;
-		int32 count = InterlockedExchangeAdd(reinterpret_cast<volatile LONG*>(&g_ref_num), 1);
+	inline unsigned int GetRefNumUpper24() {
+		int pid = 0;
+		int count = InterlockedExchangeAdd(reinterpret_cast<volatile LONG*>(&g_ref_num), 1);
 		// The 24 bit hash is composed of 14 bits of the count and 10 bits of the
 		// Process ID. With the current trace event buffer cap, the 14-bit count did
 		// not appear to wrap during a trace. Note that it is not a big deal if
@@ -30,7 +30,7 @@ namespace {
 
 namespace IPC
 {
-	const uint32 basic_message::kHeaderSize = sizeof(basic_message::Header);
+	const unsigned int basic_message::kHeaderSize = sizeof(basic_message::Header);
 
 	basic_message::basic_message(void)
 	{
@@ -59,7 +59,7 @@ namespace IPC
 
 	// Initialize a message with a user-defined type, priority value, and
 	// destination WebView ID.
-	basic_message::basic_message(int32 routing_id, uint32 type, PriorityValue priority)
+	basic_message::basic_message(int routing_id, unsigned int type, PriorityValue priority)
 		: header_(NULL)
 		, capacity_(0)
 		, ref_count_(0)
@@ -175,25 +175,25 @@ namespace IPC
 		return (header()->flags & PUMPING_MSGS_BIT) != 0;
 	}
 
-	uint32 basic_message::type() const {
+	unsigned int basic_message::type() const {
 		return header()->type;
 	}
 
-	int32 basic_message::routing_id() const {
+	int basic_message::routing_id() const {
 		return header()->routing;
 	}
 
-	void basic_message::set_routing_id(int32 new_id) {
+	void basic_message::set_routing_id(int new_id) {
 		header()->routing = new_id;
 	}
 
-	uint32 basic_message::flags() const {
+	unsigned int basic_message::flags() const {
 		return header()->flags;
 	}
 
 	//------------------------------------------------------------------------------
 	
-	void basic_message::SetHeaderValues(int32 routing, uint32 type, uint32 flags)
+	void basic_message::SetHeaderValues(int routing, unsigned int type, unsigned int flags)
 	{
 		// This should only be called when the message is already empty.
 		assert(payload_size() == 0);
@@ -264,7 +264,7 @@ namespace IPC
 		if (needed_size > capacity_ && !Resize((std::max)(capacity_ * 2, needed_size)))
 			return false;
 
-		header_->payload_size = static_cast<uint32>(new_size);
+		header_->payload_size = static_cast<unsigned int>(new_size);
 		char* dest = const_cast<char*>(payload()) + offset;
 		memcpy(dest, data, data_len);
 		return true;
@@ -300,10 +300,10 @@ namespace IPC
 
 	const char* MessageReader::GetReadPointerAndAdvance(int num_elements, size_t size_element)
 	{
-		// Check for int32 overflow.
-		int64 num_bytes = static_cast<int64>(num_elements)* size_element;
+		// Check for int overflow.
+		long long num_bytes = static_cast<long long>(num_elements)* size_element;
 		int num_bytes32 = static_cast<int>(num_bytes);
-		if (num_bytes != static_cast<int64>(num_bytes32))
+		if (num_bytes != static_cast<long long>(num_bytes32))
 			return NULL;
 		return GetReadPointerAndAdvance(num_bytes32);
 	}
@@ -318,22 +318,22 @@ namespace IPC
 		return ReadBuiltinType(result);
 	}
 
-	bool MessageReader::ReadUInt16(uint16* result)
+	bool MessageReader::ReadUInt16(unsigned short* result)
 	{
 		return ReadBuiltinType(result);
 	}
 
-	bool MessageReader::ReadUInt32(uint32* result)
+	bool MessageReader::ReadUInt32(unsigned int* result)
 	{
 		return ReadBuiltinType(result);
 	}
 
-	bool MessageReader::ReadInt64(int64* result)
+	bool MessageReader::ReadInt64(long long* result)
 	{
 		return ReadBuiltinType(result);
 	}
 
-	bool MessageReader::ReadUInt64(uint64* result)
+	bool MessageReader::ReadUInt64(unsigned long long* result)
 	{
 		return ReadBuiltinType(result);
 	}

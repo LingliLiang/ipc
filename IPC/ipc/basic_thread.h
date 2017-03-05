@@ -9,22 +9,7 @@ namespace IPC
 	{
 	public:
 		typedef std::function<void(void)> Task;
-		typedef std::function<bool(void)> Task2;
-		//enum TaskType{
-		//	TASK,
-		//	TASK2
-		//};
-
-		//struct TaskInfo
-		//{
-		//	Task t;
-		//		Task t2;
-		//	union Tasks{
-		//		
-		//	} task_;
-		//	TaskType type_;
-		//};
-
+	
 		basic_thread(void);
 		~basic_thread(void);
 
@@ -32,8 +17,8 @@ namespace IPC
 		virtual void Stop();
 		virtual void Wait(DWORD timeout);
 
-		void PostTask(const Task& task);
-		//void PostTask(const Task2& task);
+		virtual void PostTask(const Task& task);
+
 	protected:
 
 		static DWORD WINAPI ThreadMain(LPVOID params);

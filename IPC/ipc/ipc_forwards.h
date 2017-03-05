@@ -16,20 +16,20 @@
 	TypeName(const TypeName&);               \
 	void operator=(const TypeName&)
 
-typedef signed char         schar;
-typedef signed char         int8;
-typedef short               int16;
-typedef int                 int32;
-
-typedef long long           int64;
-
-typedef unsigned char      uint8;
-typedef unsigned short     uint16;
-typedef unsigned int       uint32;
-
-typedef unsigned long long uint64;
-const uint16 kuint16max = ((uint16)0xFFFF);
-	const int32 kint32max = ((int32)0x7FFFFFFF);
+//typedef signed char         signed char;
+//typedef signed char         signed char;
+//typedef short               short;
+//typedef int                 int;
+//
+//typedef long long           long long;
+//
+//typedef unsigned char      unsigned char;
+//typedef unsigned short     unsigned short;
+//typedef unsigned int       unsigned int;
+//
+//typedef unsigned long long unsigned long long;
+const unsigned short kushortmax = ((unsigned short)0xFFFF);
+	const int kintmax = ((int)0x7FFFFFFF);
 namespace IPC
 {
 	
@@ -50,8 +50,8 @@ namespace IPC
 
 	typedef std::basic_string<TCHAR> ipc_tstring;
 
-	const ipc_us kuint16max = ((ipc_us)0xFFFF);
-	const ipc_i kint32max = ((ipc_i)0x7FFFFFFF);
+	const ipc_us kushortmax = ((ipc_us)0xFFFF);
+	const ipc_i kintmax = ((ipc_i)0x7FFFFFFF);
 }
 
 

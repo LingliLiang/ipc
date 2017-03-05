@@ -2,7 +2,7 @@
 
 namespace IPC
 {
-	Message::Message(int32 routing_id, uint32 type, PriorityValue priority)
+	Message::Message(int routing_id, unsigned int type, PriorityValue priority)
 		: basic_message(routing_id, type, priority)
 	{
 	}
