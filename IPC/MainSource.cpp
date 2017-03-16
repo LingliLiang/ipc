@@ -32,20 +32,27 @@ void SampleClient::OnConnected(int peer_pid)
 	std::cout << "Process [" << peer_pid << "] Connected" << std::endl;
 }
 
+static int beginTime = 0;
 bool SampleClient::OnMessageReceived(IPC::Message* msg)
 {
 	static int qqq=0;
+	if(qqq==0)
+	{
+		qqq++;
+				beginTime = ::GetTickCount();
+				std::cout << "------------------beginTime------------------------" << std::endl;
+		fi = tiem.AbsoluteTime();
+	};
+
 	if(msg->type()==1)
 	{
+		std::cout << "run time: "<<(double)(::GetTickCount()-beginTime)/1000<<std::endl;
+
 		fi = tiem.AbsoluteTime() - fi;
 		std::cout << fi<<std::endl;
 		std::cout << "------------------------------------------" << std::endl;
 		qqq=0;
 	}
-	if(qqq==0)
-	{
-		fi = tiem.AbsoluteTime();
-	}qqq++;
 	//std::string s;
 	//s.resize(20,0);
 	//msg->routing_id();
@@ -54,7 +61,7 @@ bool SampleClient::OnMessageReceived(IPC::Message* msg)
 	//const char* sss = msg->payload();
 	//memcpy(&s[0],sss+4,4);
 	
-	std::cout << "Process [" << id_ << "]: " << std::endl;
+	//std::cout << "Process [" << id_ << "]: " << std::endl;
 	//std::cout << s << " Size:"<< msg->payload_size()-4 <<" Msg Type:"<<  msg->type()<<std::endl;
 	return true;
 }
@@ -70,7 +77,7 @@ int _tmain()
 	//IPC::Endpoint endpoint(kChannelName, &listener,IPC::Endpoint::METHOD_PIPE);
 	std::string cmd;
 	std::string txt;
-	const int kbufsize = 1280*720*32;
+	const int kbufsize = 1920*1080*4;
 	char* buffer = new char[kbufsize];
 	memset(buffer, 0, kbufsize);
 	while (true)
@@ -88,9 +95,9 @@ int _tmain()
 			{
 				char numbuf[5] = { 0 };
 				IPC::ScopedPtr<IPC::Message> m(new IPC::Message(GetCurrentProcessId(), ms, (IPC::Message::PriorityValue)0));
-				sprintf_s(numbuf, "%04d", num);
-				int offset = strlen(numbuf);
-				memcpy_s(buffer, offset, numbuf, offset);
+				//sprintf_s(numbuf, "%04d", num);
+				//int offset = strlen(numbuf);
+				//memcpy_s(buffer, offset, numbuf, offset);
 				/*memset(buffer+offset, '1', kbufsize - offset);
 				buffer[kbufsize-1] = '\0';
 				buffer[kbufsize - 2] = 'D';
@@ -100,7 +107,7 @@ int _tmain()
 				m->WriteData(buffer, kbufsize);
 				endpoint.Send(m.get());
 			};
-			while (num < 60)
+			while (num < 120)
 			{
 				Send(0);
 				num++;
